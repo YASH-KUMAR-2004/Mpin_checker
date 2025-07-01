@@ -7,7 +7,6 @@ This Python script validates 4-digit and 6-digit MPINs based on:
 
 ### ✅ Features
 - Covers Parts A to E of MPIN assignment
-- 20 test cases implemented
 - Clean and modular code
 
 ### 🚀 How to Run
