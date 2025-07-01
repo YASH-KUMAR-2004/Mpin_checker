@@ -1,18 +1,50 @@
 from datetime import datetime
+import requests
+from bs4 import BeautifulSoup
 
-# Function to validate date input
+# ✅ Function to fetch common 4- or 6-digit PINs from Pocket-Lint
+def fetch_common_digit_pins_from_pocketlint(tag_, id_, length):
+    url = "https://www.pocket-lint.com/these-are-the-20-most-common-phone-pins-is-your-device-vulnerable/"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0 Safari/537.36"
+    }
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+    except Exception as e:
+        print("❌ Failed to fetch PINs from Pocket-Lint:", e)
+        return []
+
+    soup = BeautifulSoup(response.text, 'html.parser')
+    heading = soup.find(lambda tag: tag.name.startswith(tag_) and id_ in tag.get_text())
+
+    if not heading:
+        print("❌ PIN section not found")
+        return []
+
+    pin_list = []
+    ul_tag = heading.find_next("ul")
+    if ul_tag:
+        for li in ul_tag.find_all("li"):
+            text = li.get_text(strip=True)
+            if text.isdigit() and len(text) == length:
+                pin_list.append(text)
+
+    return pin_list
+
+# ✅ Function to validate date input
 def get_valid_date(prompt):
     while True:
         date_str = input(prompt).strip()
         if date_str == "":
-            return None  # Allow skipping if user presses Enter
+            return None
         try:
-            date_obj = datetime.strptime(date_str, "%d-%m-%Y")
-            return date_obj
+            return datetime.strptime(date_str, "%d-%m-%Y")
         except ValueError:
-            print("❌ Invalid date format or value! Please enter in DD-MM-YYYY format.")
+            print("❌ Invalid date! Please use DD-MM-YYYY format.")
 
-# Function to generate date-based PINs
+# ✅ Function to generate all combinations from a list of dates
 def generate_all_combinations(dates, pin_length=4):
     def generate_date_pins(date_obj, pin_length):
         dd = f"{date_obj.day:02d}"
@@ -50,56 +82,39 @@ def generate_all_combinations(dates, pin_length=4):
             all_pins.update(generate_date_pins(date, pin_length))
     return list(all_pins)
 
-# ---- MAIN EXECUTION ----
+# ✅ MAIN EXECUTION
+if __name__ == "__main__":
+    print("📡 Fetching most common MPINs from Pocket-Lint...")
+    common4 = set(fetch_common_digit_pins_from_pocketlint("p", "Common four-digit PINs", 4))
+    common6 = set(fetch_common_digit_pins_from_pocketlint("p", "Common six-digit PINs", 6))
 
-# Step 1: Get MPIN input and validate length
-pin = input("Enter your 4 or 6 digit MPIN: ").strip()
-if not (pin.isdigit() and len(pin) in [4, 6]):
-    print("❌ You entered an invalid PIN. It must be 4 or 6 digits.")
-    exit()
+    pin = input("\n🔐 Enter your 4 or 6 digit MPIN: ").strip()
+    if not (pin.isdigit() and len(pin) in [4, 6]):
+        print("❌ Invalid MPIN length! It must be 4 or 6 digits.")
+        exit()
 
-# Step 2: Get date inputs
-dob = get_valid_date("Enter your date of birth (DD-MM-YYYY) or press Enter to skip: ")
-spdob = get_valid_date("Enter your spouse's date of birth (DD-MM-YYYY) or press Enter to skip: ")
-anni = get_valid_date("Enter your anniversary date (DD-MM-YYYY) or press Enter to skip: ")
+    # Get user demographic info
+    dob = get_valid_date("📅 Enter your Date of Birth (DD-MM-YYYY), or press Enter to skip: ")
+    spdob = get_valid_date("📅 Enter your Spouse's DOB, or press Enter to skip: ")
+    anni = get_valid_date("📅 Enter your Anniversary Date, or press Enter to skip: ")
 
-# Step 3: Define common PINs
-common4 = {
-    "1234", "0000", "1111", "1212", "7777",
-    "1004", "2000", "4444", "2222", "6969",
-    "9999", "3333", "5555", "6666", "1122",
-    "1313", "8888", "4321", "1010", "2580"
-}
+    pin_len = len(pin)
+    reasons = []
 
-common6 = {
-    "123456", "000000", "111111", "121212", "654321",
-    "112233", "123123", "456456", "159753", "222222",
-    "999999", "333333", "444444", "555555", "666666",
-    "101010", "777777", "987654", "123321", "147258"
-}
+    # Check common PINs
+    if pin_len == 4 and pin in common4:
+        reasons.append("COMMONLY_USED")
+    elif pin_len == 6 and pin in common6:
+        reasons.append("COMMONLY_USED")
 
-# Step 4: Start evaluation
-reasons = []
-pin_len = len(pin)
+    # Check date-based patterns
+    if dob and pin in generate_all_combinations([dob], pin_len):
+        reasons.append("DEMOGRAPHIC_DOB_SELF")
+    if spdob and pin in generate_all_combinations([spdob], pin_len):
+        reasons.append("DEMOGRAPHIC_DOB_SPOUSE")
+    if anni and pin in generate_all_combinations([anni], pin_len):
+        reasons.append("DEMOGRAPHIC_ANNIVERSARY")
 
-# Check if it's a commonly used PIN
-if pin_len == 4 and pin in common4:
-    reasons.append("COMMONLY_USED")
-elif pin_len == 6 and pin in common6:
-    reasons.append("COMMONLY_USED")
-
-# Check demographic reasons
-if dob and pin in generate_all_combinations([dob], pin_len):
-    reasons.append("DEMOGRAPHIC_DOB_SELF")
-if spdob and pin in generate_all_combinations([spdob], pin_len):
-    reasons.append("DEMOGRAPHIC_DOB_SPOUSE")
-if anni and pin in generate_all_combinations([anni], pin_len):
-    reasons.append("DEMOGRAPHIC_ANNIVERSARY")
-
-# Step 5: Output result
-if reasons:
-    print("\nStrength: WEAK")
-    print("Reasons:", reasons)
-else:
-    print("\nStrength: STRONG")
-    print("Reasons: []")
+    # Print result
+    print("\n🔎 MPIN Strength:", "WEAK" if reasons else "STRONG")
+    print("📋 Reasons:", reasons if reasons else "[]")
