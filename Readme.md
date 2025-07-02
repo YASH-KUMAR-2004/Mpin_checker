@@ -7,6 +7,7 @@ This project helps evaluate the strength of a 4-digit or 6-digit MPIN (Mobile Pe
   - Spouse's Date of Birth
   - Wedding Anniversary
 
+<<<<<<< HEAD
 The goal is to guide users toward choosing **stronger and less predictable MPINs** to enhance mobile banking security.
 
 ---
@@ -40,6 +41,11 @@ Mpin_Strength_Checking/
 ## 📦 Requirements
 
 Install the required dependencies using:
+=======
+### ✅ Features
+- Covers Parts A to E of MPIN assignment
+- Clean and modular code
+>>>>>>> 5a6418bc918236ffd6af1e3340a86034f3c22a4e
 
 ```bash
 pip install -r requirements.txt
